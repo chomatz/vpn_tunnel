@@ -1,0 +1,77 @@
+---
+    
+- name: ensure tasks run only on selected os releases
+  block:
+    
+    - name: ensure tasks run only when key variables are defined
+      block:
+    
+        - name: install wireguard tools
+          ansible.builtin.package:
+            name: wireguard-tools
+            state: present
+    
+        - name: define work directory
+          ansible.builtin.set_fact:
+            work_directory: "/tmp/ansible_{{ lookup('community.general.random_string', special=false, length=10) }}"
+    
+        - name: create work directory
+          ansible.builtin.file:
+            path: "{{ work_directory }}"
+            state: directory
+    
+        - name: check if wireguard tunnel already exists
+          ansible.builtin.shell:
+            cmd: "touch {{ work_directory }}/$(nmcli connection show | grep {{ item.name }}) | cut -d ' ' -f 1"
+          loop: "{{ wireguard }}"
+          loop_control:
+            label: "{{ item.name }}"
+          changed_when: false
+          no_log: "{{ hide_secrets }}"
+    
+        - name: upload wireguard configuration file
+          ansible.builtin.template:
+            src: templates/wg.conf.j2
+            dest: "{{ work_directory }}/{{ item.device }}.conf"
+          loop: "{{ wireguard }}"
+          loop_control:
+            label: "{{ item.name }}"
+          no_log: "{{ hide_secrets }}"
+    
+        - name: import wireguard configuration file
+          ansible.builtin.command:
+            cmd: "nmcli connection import type wireguard file {{ item.device }}.conf"
+            chdir: "{{ work_directory }}"
+            creates: "{{ item.name }}"
+          loop: "{{ wireguard }}"
+          loop_control:
+            label: "{{ item.name }}"
+          no_log: "{{ hide_secrets }}"
+    
+        - name: configure wireguard interface
+          ansible.builtin.command:
+            cmd: "nmcli connection modify {{ item.device }} connection.id {{ item.name }} connection.autoconnect false"
+            chdir: "{{ work_directory }}"
+            creates: "{{ item.name }}"
+          loop: "{{ wireguard }}"
+          loop_control:
+            label: "{{ item.name }}"
+          no_log: "{{ hide_secrets }}"
+    
+        - name: remove work directory
+          ansible.builtin.file:
+            path: "{{ work_directory }}"
+            state: absent
+    
+      when:
+        - wireguard is defined
+        - wireguard_ip is defined
+        - wireguard_key_private is defined
+        - wireguard_key_public is defined
+
+  when: >
+    (ansible_distribution == "Archlinux" and ansible_distribution_release == "holo") or
+    ansible_distribution == "Fedora" or
+    ansible_distribution == "Rocky"
+
+...
