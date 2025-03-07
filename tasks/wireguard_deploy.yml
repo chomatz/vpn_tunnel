@@ -2,7 +2,7 @@
     
 - name: ensure tasks run only on selected os releases
   block:
-    
+
     - name: ensure tasks run only when key variables are defined
       block:
     
@@ -28,7 +28,7 @@
             label: "{{ item.name }}"
           changed_when: false
           no_log: "{{ hide_secrets }}"
-    
+
         - name: upload wireguard configuration file
           ansible.builtin.template:
             src: templates/wg.conf.j2
@@ -36,8 +36,9 @@
           loop: "{{ wireguard }}"
           loop_control:
             label: "{{ item.name }}"
+          when: wireguard_ip[item.name] is defined
           no_log: "{{ hide_secrets }}"
-    
+
         - name: import wireguard configuration file
           ansible.builtin.command:
             cmd: "nmcli connection import type wireguard file {{ item.device }}.conf"
@@ -46,6 +47,7 @@
           loop: "{{ wireguard }}"
           loop_control:
             label: "{{ item.name }}"
+          when: wireguard_ip[item.name] is defined
           no_log: "{{ hide_secrets }}"
     
         - name: configure wireguard interface
@@ -56,6 +58,7 @@
           loop: "{{ wireguard }}"
           loop_control:
             label: "{{ item.name }}"
+          when: wireguard_ip[item.name] is defined
           no_log: "{{ hide_secrets }}"
     
         - name: remove work directory
@@ -65,7 +68,6 @@
     
       when:
         - wireguard is defined
-        - wireguard_ip is defined
         - wireguard_key_private is defined
         - wireguard_key_public is defined
 
