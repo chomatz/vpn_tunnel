@@ -50,35 +50,37 @@
           when: wireguard_ip[item.name] is defined
           no_log: "{{ hide_secrets }}"
     
-        - name: rename wireguard interface
-          ansible.builtin.command:
-            cmd: "nmcli connection modify {{ item.device }} connection.id {{ item.name }}"
+        - name: configure wireguard interface(s)
+          ansible.builtin.shell:
+            cmd: "nmcli connection modify {{ item.device }} connection.id {{ item.name }}; nmcli connection modify {{ item.name }}  connection.autoconnect false; nmcli connection down {{ item.name }}"
             chdir: "{{ work_directory }}"
             creates: "{{ item.name }}"
+          register: wg_config
           loop: "{{ wireguard }}"
           loop_control:
             label: "{{ item.name }}"
           when: wireguard_ip[item.name] is defined
           no_log: "{{ hide_secrets }}"
 
-        - name: configure wireguard interface
-          community.general.nmcli:
-            conn_name: "{{ item.name }}"
-            autoconnect: false
-            state: down
-          register: wg_config
-          failed_when:
-            - wg_config is failed
-            - "'is not an active connection' not in wg_config.msg"
-          loop: "{{ wireguard }}"
-          loop_control:
-            label: "{{ item.name }}"
-          no_log: "{{ hide_secrets }}"
+# lacks idempotency - community.general.nmcli fails when trying to "down" an already inactive connection
+#        - name: configure wireguard interface
+#          community.general.nmcli:
+#            conn_name: "{{ item.name }}"
+#            autoconnect: false
+#            state: down
+#          register: wg_config
+#          failed_when:
+#            - wg_config is failed
+#            - "'is not an active connection' not in wg_config.msg"
+#          loop: "{{ wireguard }}"
+#          loop_control:
+#            label: "{{ item.name }}"
+#          no_log: "{{ hide_secrets }}"
 
         - name: display wiregaurd configuration result
           ansible.builtin.debug:
             var: wg_config
-            verbosity: 1
+            verbosity: 0
     
         - name: remove work directory
           ansible.builtin.file:
