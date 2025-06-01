@@ -80,7 +80,7 @@
         - name: display wiregaurd configuration result
           ansible.builtin.debug:
             var: wg_config
-            verbosity: 0
+            verbosity: 1
     
         - name: remove work directory
           ansible.builtin.file:
