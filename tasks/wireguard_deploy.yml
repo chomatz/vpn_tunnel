@@ -54,21 +54,6 @@
           when: wireguard_ip[item.name] is defined
           no_log: "{{ hide_secrets }}"
 
-# lacks idempotency - community.general.nmcli fails when trying to "down" an already inactive connection
-#        - name: configure wireguard interface
-#          community.general.nmcli:
-#            conn_name: "{{ item.name }}"
-#            autoconnect: false
-#            state: down
-#          register: wg_config
-#          failed_when:
-#            - wg_config is failed
-#            - "'is not an active connection' not in wg_config.msg"
-#          loop: "{{ wireguard }}"
-#          loop_control:
-#            label: "{{ item.name }}"
-#          no_log: "{{ hide_secrets }}"
-
 
         - name: display wiregaurd configuration result
           ansible.builtin.debug:
