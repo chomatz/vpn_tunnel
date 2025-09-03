@@ -93,8 +93,10 @@
         - wireguard_key_public is defined
 
   when: >
-    (ansible_distribution == "Archlinux" and ansible_distribution_release == "holo") or
-    ansible_distribution == "Fedora" or
-    ansible_distribution == "Rocky"
+    os_id.stdout == "bazzite" or
+    os_id.stdout == "fedora" or
+    os_id.stdout == "rhel" or
+    os_id.stdout == "rocky" or
+    os_id.stdout == "steamos"
 
 ...
