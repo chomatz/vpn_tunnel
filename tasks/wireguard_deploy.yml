@@ -11,6 +11,7 @@
           ansible.builtin.package:
             name: wireguard-tools
             state: present
+          when: ansible_distribution != "Bazzite"
     
         - name: check if wireguard tunnel already exists
           ansible.builtin.shell:
@@ -66,10 +67,10 @@
         - wireguard_key_public is defined
 
   when: >
-    os_id.stdout == "bazzite" or
-    os_id.stdout == "fedora" or
-    os_id.stdout == "rhel" or
-    os_id.stdout == "rocky" or
-    os_id.stdout == "steamos"
+    (ansible_distribution == "Archlinux" and ansible_distribution_release == "holo") or
+    ansible_distribution == "Bazzite" or
+    ansible_distribution == "Fedora" or
+    ansible_distribution == "RedHat" or
+    ansible_distribution == "Rocky"
 
 ...
