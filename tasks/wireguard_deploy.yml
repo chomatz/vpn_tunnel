@@ -14,13 +14,15 @@
           when: ansible_distribution != "Bazzite"
     
         - name: check if wireguard tunnel already exists
-          ansible.builtin.shell:
-            cmd: "touch {{ ansible_work_dir.path }}/$(nmcli connection show | grep {{ item.name }}) | cut -d ' ' -f 1"
-          loop: "{{ wireguard }}"
-          loop_control:
-            label: "{{ item.name }}"
+          ansible.builtin.command:
+            cmd: "nmcli connection show"
           changed_when: false
-          no_log: "{{ hide_secrets }}"
+          register: nmcli_connections
+
+        - name: display nmcli connections
+          ansible.builtin.debug:
+            var: nmcli_connections.stdout
+            verbosity: 1
 
         - name: upload wireguard configuration file
           ansible.builtin.template:
@@ -33,26 +35,29 @@
           no_log: "{{ hide_secrets }}"
 
         - name: import wireguard configuration file
-          ansible.builtin.command:
-            cmd: "nmcli connection import type wireguard file {{ item.device }}.conf"
+          ansible.builtin.shell:
+            cmd: "nmcli connection import type wireguard file {{ item.device }}.conf; nmcli connection down {{ item.device }}"
             chdir: "{{ ansible_work_dir.path }}"
-            creates: "{{ item.name }}"
           loop: "{{ wireguard }}"
           loop_control:
             label: "{{ item.name }}"
-          when: wireguard_ip[item.name] is defined
+          when:
+            - wireguard_ip[item.name] is defined
+            - 'item.name not in nmcli_connections.stdout'
+          timeout: 30
           no_log: "{{ hide_secrets }}"
     
         - name: configure wireguard interface(s)
           ansible.builtin.shell:
-            cmd: "nmcli connection modify {{ item.device }} connection.id {{ item.name }}; nmcli connection modify {{ item.name }}  connection.autoconnect false; nmcli connection down {{ item.name }}"
+            cmd: "nmcli connection modify {{ item.device }} connection.id {{ item.name }}; nmcli connection modify {{ item.name }}  connection.autoconnect false"
             chdir: "{{ ansible_work_dir.path }}"
-            creates: "{{ item.name }}"
           register: wg_config
           loop: "{{ wireguard }}"
           loop_control:
             label: "{{ item.name }}"
-          when: wireguard_ip[item.name] is defined
+          when:
+            - wireguard_ip[item.name] is defined
+            - 'item.name not in nmcli_connections.stdout'
           no_log: "{{ hide_secrets }}"
 
 
